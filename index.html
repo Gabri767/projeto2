@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Cyberpunk Matrix Terminal & Visualizer - Projeto 2">
+    <title>Matrix Cyber Interface | Projeto 2</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;700&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #00ff66;
+            --primary-glow: rgba(0, 255, 102, 0.45);
+            --primary-dark: #003b17;
+            --bg-dark: #050a07;
+            --bg-card: rgba(6, 18, 12, 0.78);
+            --border-color: rgba(0, 255, 102, 0.28);
+            --text-main: #e2fced;
+            --text-dim: #70a886;
+            --accent: #00f0ff;
+            --font-code: 'Fira Code', monospace;
+            --font-heading: 'Orbitron', sans-serif;
+            --font-ui: 'Rajdhani', sans-serif;
+        }
+
+        [data-theme="cyberpunk"] {
+            --primary: #00f0ff;
+            --primary-glow: rgba(0, 240, 255, 0.45);
+            --primary-dark: #003540;
+            --bg-dark: #060814;
+            --bg-card: rgba(8, 15, 30, 0.82);
+            --border-color: rgba(0, 240, 255, 0.32);
+            --text-main: #e0f8ff;
+            --text-dim: #689cb8;
+            --accent: #ff007f;
+        }
+
+        [data-theme="amber"] {
+            --primary: #ffaa00;
+            --primary-glow: rgba(255, 170, 0, 0.45);
+            --primary-dark: #402a00;
+            --bg-dark: #0f0b04;
+            --bg-card: rgba(26, 17, 5, 0.82);
+            --border-color: rgba(255, 170, 0, 0.32);
+            --text-main: #fff2db;
+            --text-dim: #b89768;
+            --accent: #ff3c00;
+        }
+
+        [data-theme="crimson"] {
+            --primary: #ff2a4b;
+            --primary-glow: rgba(255, 42, 75, 0.45);
+            --primary-dark: #40050e;
+            --bg-dark: #0d0406;
+            --bg-card: rgba(26, 6, 11, 0.82);
+            --border-color: rgba(255, 42, 75, 0.32);
+            --text-main: #ffe3e7;
+            --text-dim: #b86876;
+            --accent: #9d00ff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            user-select: none;
+        }
+
+        /* Canvas de fundo */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Scanline Overlay CRT */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.28) 50%
+            ), linear-gradient(
+                90deg,
+                rgba(255, 0, 0, 0.02),
+                rgba(0, 255, 0, 0.01),
+                rgba(0, 0, 255, 0.02)
+            );
+            background-size: 100% 3px, 6px 100%;
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0.65;
+        }
+
+        /* Header Navigation */
+        header {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: rgba(3, 8, 5, 0.7);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: var(--font-heading);
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--primary);
+            text-shadow: 0 0 12px var(--primary-glow);
+            letter-spacing: 2px;
+        }
+
+        .logo-badge {
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: var(--primary-dark);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            letter-spacing: 1px;
+            vertical-align: middle;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .theme-select {
+            background: var(--bg-card);
+            color: var(--primary);
+            border: 1px solid var(--border-color);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .theme-select:hover, .theme-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .btn-audio {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--primary);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-audio:hover {
+            background: var(--primary-dark);
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        /* Main Container */
+        main {
+            position: relative;
+            z-index: 10;
+            flex: 1;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 960px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Terminal Window */
+        .terminal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px var(--primary-glow);
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        .terminal-header {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.65rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .window-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+        }
+
+        .dot-red { background: #ff5f56; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #27c93f; }
+
+        .terminal-title {
+            font-family: var(--font-code);
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+        }
+
+        .terminal-body {
+            flex: 1;
+            padding: 1.2rem;
+            font-family: var(--font-code);
+            font-size: 0.9rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            color: var(--text-main);
+        }
+
+        .terminal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .terminal-body::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .term-line {
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .term-prompt {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .term-accent {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .term-dim {
+            color: var(--text-dim);
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: auto;
+            padding-top: 0.5rem;
+        }
+
+        .term-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--primary);
+            font-family: var(--font-code);
+            font-size: 0.95rem;
+            caret-color: var(--primary);
+        }
+
+        /* Sidebar Widgets */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .widget-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.2rem;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+
+        .widget-title {
+            font-family: var(--font-heading);
+            font-size: 0.95rem;
+            color: var(--primary);
+            letter-spacing: 1.5px;
+            margin-bottom: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+            box-shadow: 0 0 8px var(--primary);
+            animation: pulse 1.6s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; transform: scale(0.9); }
+            50% { opacity: 1; transform: scale(1.15); }
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 0.65rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: var(--font-code);
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        /* Links & Quick Actions */
+        .quick-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .quick-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.65rem 0.9rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .quick-btn:hover {
+            background: var(--primary-dark);
+            color: var(--primary);
+            border-color: var(--primary);
+            transform: translateX(4px);
+            box-shadow: 0 0 12px var(--primary-glow);
+        }
+
+        /* Matrix Rain Controls */
+        .controls-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-code);
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 3px;
+            outline: none;
+            border: 1px solid var(--border-color);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--primary);
+        }
+
+        /* Footer */
+        footer {
+            position: relative;
+            z-index: 10;
+            padding: 1rem 2rem;
+            text-align: center;
+            font-family: var(--font-code);
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            border-top: 1px solid var(--border-color);
+            background: rgba(3, 8, 5, 0.7);
+            backdrop-filter: blur(10px);
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Canvas de Efeito Matrix de Fundo -->
+    <canvas id="bg-canvas"></canvas>
+    
+    <!-- Filtro CRT Scanlines -->
+    <div class="scanlines"></div>
+
+    <!-- Barra de Navegação -->
+    <header>
+        <div class="logo">
+            <span>// MATRIX.SYS</span>
+            <span class="logo-badge">PROJETO 2</span>
+        </div>
+
+        <div class="controls">
+            <select class="theme-select" id="theme-selector" title="Trocar Tema Visual">
+                <option value="matrix">🟢 Matrix Green</option>
+                <option value="cyberpunk">🔵 Cyberpunk Cyan</option>
+                <option value="amber">🟠 Amber CRT</option>
+                <option value="crimson">🔴 Crimson Red</option>
+            </select>
+
+            <button class="btn-audio" id="btn-audio-toggle" title="Ativar/Desativar Efeitos Sonoros">
+                <span id="audio-icon">🔇</span>
+                <span id="audio-text">Audio FX</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main>
+        <!-- Janela de Terminal Interativo -->
+        <div class="terminal-card">
+            <div class="terminal-header">
+                <div class="window-dots">
+                    <span class="dot dot-red"></span>
+                    <span class="dot dot-yellow"></span>
+                    <span class="dot dot-green"></span>
+                </div>
+                <div class="terminal-title">bash - matrix@sys-node-02: ~</div>
+                <div style="width: 40px;"></div>
+            </div>
+
+            <div class="terminal-body" id="term-output">
+                <div class="term-line term-dim">===================================================</div>
+                <div class="term-line"><span class="term-prompt">MATRIX OPERATING SYSTEM</span> [Versão 2.4.0-PROJETO2]</div>
+                <div class="term-line term-dim">Iniciado com sucesso via GitHub Pages.</div>
+                <div class="term-line term-dim">===================================================</div>
+                <div class="term-line">Digite <span class="term-accent">'help'</span> para visualizar todos os comandos disponíveis.</div>
+                <div class="term-line">&nbsp;</div>
+            </div>
+
+            <div class="input-row" style="padding: 0 1.2rem 1.2rem 1.2rem;">
+                <span class="term-prompt">guest@matrix:~$</span>
+                <input type="text" class="term-input" id="term-input" autocomplete="off" autofocus placeholder="Digite um comando (ex: help, clear, matrix, info)...">
+            </div>
+        </div>
+
+        <!-- Sidebar com Widgets -->
+        <div class="sidebar">
+            <!-- Widget de Status do Sistema -->
+            <div class="widget-card">
+                <div class="widget-title">
+                    <span>TELEMETRIA DO SISTEMA</span>
+                    <span class="status-dot"></span>
+                </div>
+                <div class="stat-grid">
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-nodes">1,024</div>
+                        <div class="stat-label">Conexões Ativas</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-latency">12ms</div>
+                        <div class="stat-label">Latência</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-fps">60 FPS</div>
+                        <div class="stat-label">Render Frame</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-uptime">00:00:00</div>
+                        <div class="stat-label">Uptime</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controles do Visualizador -->
+            <div class="widget-card">
+                <div class="widget-title">
+                    <span>PARÂMETROS MATRIX</span>
+                </div>
+                <div class="controls-panel">
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Densidade de Chuva</span>
+                            <span id="density-val">50%</span>
+                        </div>
+                        <input type="range" id="density-slider" min="20" max="100" value="50">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Velocidade de Queda</span>
+                            <span id="speed-val">1.0x</span>
+                        </div>
+                        <input type="range" id="speed-slider" min="5" max="30" value="15">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Repositórios Relacionados -->
+            <div class="widget-card">
+                <div class="widget-title">
+                    <span>REPOSITÓRIOS GITHUB</span>
+                </div>
+                <div class="quick-links">
+                    <a href="https://github.com/Gabri767/projeto2" target="_blank" rel="noopener" class="quick-btn">
+                        <span>📦 Repositório Projeto 2</span>
+                        <span>↗</span>
+                    </a>
+                    <a href="https://gabri767.github.io/projeto3/" target="_blank" rel="noopener" class="quick-btn">
+                        <span>⚡ Acessar Projeto 3</span>
+                        <span>↗</span>
+                    </a>
+                    <a href="https://github.com/Gabri767" target="_blank" rel="noopener" class="quick-btn">
+                        <span>👤 Perfil GitHub</span>
+                        <span>↗</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        Desenvolvido com tecnologia Matrix &bull; Publicado via <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a> &bull; Gabri767
+    </footer>
+
+    <!-- Scripts da Aplicação -->
+    <script src="matrix/index.js"></script>
+</body>
+</html>
